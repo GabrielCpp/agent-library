@@ -1,0 +1,5 @@
+command: python3 {dir}/method_skill_edits.py
+watches: [edit]
+not_on: [codex, copilot, opencode]
+timeout: 5
+status: Checking the edit for a method-skill moment

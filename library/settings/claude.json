@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Read",
+      "Write",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "LS",
+      "WebSearch",
+      "mcp__playwright",
+      "mcp__maestro",
+      "mcp__groom",
+      "SendMessage",
+      "ListAgents"
+    ],
+    "deny": [
+      "Artifact",
+      "ArtifactData",
+      "ArtifactComments",
+      "NotebookEdit",
+      "RemoteTrigger",
+      "DesignSync",
+      "SendToProject",
+      "SendToProjectContext",
+      "LSP",
+      "AskUserQuestion"
+    ]
+  },
+  "model": "claude-opus-5-5",
+  "availableModels": [
+    "claude-fable-5-2",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5"
+  ],
+  "effortLevel": "medium",
+  "promptCacheTtl": "1h",
+  "subagentPromptCacheTtl": "5m",
+  "autoCompactWindow": 200000,
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "enabledPlugins": {
+    "code-review@claude-plugins-official": false,
+    "pyright-lsp@claude-plugins-official": false,
+    "cc-plugin-easel@builtin": false
+  },
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
+  },
+  "disableClaudeAiConnectors": true,
+  "syncClaudeAiSkills": false,
+  "syncClaudeAiPlugins": false,
+  "skillOverrides": {
+    "dataviz": "off",
+    "artifact-design": "off",
+    "artifact-diagramming": "off",
+    "artifact-capabilities": "off",
+    "keybindings-help": "off",
+    "simplify": "off",
+    "fewer-permission-prompts": "off",
+    "schedule": "off",
+    "run": "off",
+    "plugin-authoring": "off",
+    "init": "off",
+    "claude-approvals": "name-only",
+    "security-review": "name-only",
+    "update-config": "name-only"
+  },
+  "feedbackDrafts": "off",
+  "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
+  "crossSessionInbound": "accept",
+  "env": {
+    "CLAUDE_CODE_ENABLE_CFC": "0"
+  }
+}

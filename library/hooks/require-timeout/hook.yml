@@ -1,0 +1,5 @@
+command: python3 {dir}/require_timeout.py --harness {harness}
+watches: [shell]
+not_on: [codex, antigravity]
+timeout: 5
+status: Checking the shell timeout

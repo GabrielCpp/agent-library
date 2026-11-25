@@ -1,0 +1,5 @@
+description: Generic Pulumi infrastructure skills (core + local-run QA + Cloud Build CI / custom Docker subset). Pair with the `infra` pack for GCP CI/IAM conventions.
+skills:
+  - stacks/pulumi/*
+scaffolds:
+  - pulumi-infra

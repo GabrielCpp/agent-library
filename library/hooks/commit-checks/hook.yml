@@ -1,0 +1,4 @@
+command: python3 {dir}/commit_checks.py --harness {harness}
+watches: [shell]
+timeout: 15
+status: Adding the repo's commit checks

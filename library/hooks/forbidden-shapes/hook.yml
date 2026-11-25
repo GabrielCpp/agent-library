@@ -1,0 +1,4 @@
+command: python3 -B {dir}/check_forbidden_shapes.py --hook
+watches: [edit, shell]
+timeout: 10
+status: Checking for forbidden shapes

@@ -1,0 +1,5 @@
+description: Rust skills for one Cargo workspace with a core crate and axum API, clap CLI and Slint desktop hosts. Pair with the `general` pack, because the skills build on the generic hexagonal-architecture, http-design, testing and ui skills.
+skills:
+  - stacks/rust/*
+scaffolds:
+  - rust-workspace

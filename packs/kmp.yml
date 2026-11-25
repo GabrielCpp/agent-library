@@ -1,0 +1,5 @@
+description: Kotlin Multiplatform skills for one Compose app on Android, iOS and desktop. Pair with the `general` pack. kmp-design-system and kmp-a11y build on the generic ui-design-system and ui-accessibility methodology.
+skills:
+  - stacks/kmp/*
+scaffolds:
+  - kmp-app

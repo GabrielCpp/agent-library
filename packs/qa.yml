@@ -1,0 +1,5 @@
+description: >
+  Shared QA planning prompts. Prompts only — per-stack QA skills ship with
+  their stack packs (go-qa, flutter-qa, react-router-qa, pulumi-qa).
+prompts:
+  - qa/*

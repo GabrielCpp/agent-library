@@ -1,0 +1,5 @@
+description: Generic Go repository skills and maintenance prompts.
+skills:
+  - stacks/go/*
+scaffolds:
+  - go-service

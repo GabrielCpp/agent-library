@@ -1,0 +1,17 @@
+{
+  "model": "gpt-6.2-astra",
+  "model_reasoning_effort": "high",
+  "model_auto_compact_token_limit": 150000,
+  "web_search": "live",
+  "approval_policy": "on-request",
+  "sandbox_mode": "workspace-write",
+  "features": {
+    "apps": false,
+    "workspace_dependencies": false,
+    "collaboration_modes": false,
+    "realtime_conversation": false,
+    "request_rule": false,
+    "image_detail_original": false,
+    "workspace_owner_usage_nudge": false
+  }
+}

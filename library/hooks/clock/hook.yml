@@ -1,0 +1,5 @@
+command: python3 {dir}/clock.py --harness {harness}
+watches: [shell, edit]
+not_on: [pi, antigravity]
+timeout: 5
+status: Checking elapsed time

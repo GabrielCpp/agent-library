@@ -1,0 +1,5 @@
+command: python3 {dir}/follow_up_check.py
+when: done
+not_on: [codex, copilot, opencode]
+timeout: 10
+status: Checking the reply for an offer of more work

@@ -1,0 +1,5 @@
+description: Generic TypeScript React Router web app instructions. Pair with the `general` pack. react-router-design-system builds on the generic ui-design-system methodology.
+skills:
+  - stacks/react-router/*
+scaffolds:
+  - react-router-web

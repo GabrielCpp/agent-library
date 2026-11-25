@@ -1,0 +1,25 @@
+rust-workspace:
+  description: Seed a Rust workspace folder with a curated .gitignore, the clippy test allowances and a pinned toolchain channel.
+  params:
+    dir: .
+  tree:
+    $dir/.gitignore: |
+      # Cargo
+      target/
+      **/*.rs.bk
+
+      # IDE
+      .idea/
+      .vscode/
+      .DS_Store
+
+      # Local data and environment
+      .env
+      *.local.json
+    $dir/clippy.toml: |
+      allow-unwrap-in-tests = true
+      allow-expect-in-tests = true
+    $dir/rust-toolchain.toml: |
+      [toolchain]
+      channel = "stable"
+      components = ["clippy", "rustfmt"]

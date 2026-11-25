@@ -1,0 +1,40 @@
+kmp-app:
+  description: Seed a Kotlin Multiplatform app folder with a curated .gitignore.
+  params:
+    dir: .
+  tree:
+    $dir/.gitignore: |
+      # Gradle and Kotlin
+      .gradle/
+      .kotlin/
+      **/build/
+      !src/**/build/
+      local.properties
+
+      # IDE
+      *.iml
+      .idea/
+      .DS_Store
+      captures/
+
+      # Android native
+      .externalNativeBuild/
+      .cxx/
+
+      # Xcode
+      xcuserdata/
+      *.xcodeproj/*
+      !*.xcodeproj/project.pbxproj
+      !*.xcodeproj/xcshareddata/
+      !*.xcodeproj/project.xcworkspace/
+      !*.xcworkspace/contents.xcworkspacedata
+      **/xcshareddata/WorkspaceSettings.xcsettings
+
+      # Signing
+      *.jks
+      *.keystore
+      *.p12
+      *.mobileprovision
+
+      # QA proof
+      .maestro/out/

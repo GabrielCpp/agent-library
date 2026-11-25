@@ -1,0 +1,6 @@
+description: Product planning skills for epics, stories, and roadmaps.
+skills:
+  - process/*          # interactive research → threads → story refinement
+
+prompts:
+  - review/*

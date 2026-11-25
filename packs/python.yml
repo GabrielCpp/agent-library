@@ -1,0 +1,9 @@
+description: >
+  Generic Python CLI, architecture, testing, release and workhorse workflow
+  scripting skills. Releasing is release-please plus PyPI Trusted Publishing:
+  proposed in a pull request, shipped by merging it, with no API token anywhere.
+  Includes the cross-language architecture and testing contracts —
+  python-architecture is written as the Python mechanics for the
+  ports-and-adapters and code-structure contracts and is incomplete without them.
+skills:
+  - stacks/python/*

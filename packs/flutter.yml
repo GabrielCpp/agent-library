@@ -1,0 +1,7 @@
+description: Generic Flutter repository skills and maintenance prompts. Pair with the `general` pack. flutter-design-system builds on the generic ui-design-system methodology.
+skills:
+  - stacks/flutter/*
+prompts:
+  - flutter/*
+scaffolds:
+  - flutter-app

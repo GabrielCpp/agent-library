@@ -1,0 +1,4 @@
+command: saddlebag guard --hook
+watches: [read, search, shell]
+timeout: 5
+status: saddlebag guard
