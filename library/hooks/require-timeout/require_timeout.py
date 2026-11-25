@@ -8,7 +8,8 @@ A signature keeps each simple command's program and the plain words after it, so
 ``pytest -q tests/a.py`` and ``pytest -q tests/b.py`` share ``pytest -q``.
 
 A call with no timeout takes the last timeout recorded for the same command, or else the
-largest of the recent timeouts recorded for its signature, or else 30 seconds.
+largest of the recent timeouts recorded for its signature. A call the cache knows nothing
+about is refused, so the agent estimates its own timeout and retries.
 
 ``--harness`` names the harness that runs the guard. Claude and OpenCode carry a timeout
 parameter, so the guard rewrites that parameter and leaves the command alone. Claude's auto
@@ -41,7 +42,6 @@ T = TypeVar("T")
 parse_json: Callable[[str], object] = json.loads
 
 MAX_TIMEOUT_MS = 600_000
-DEFAULT_TIMEOUT_MS = 30_000
 KILL_AFTER_SECONDS = 5
 NATIVE_HARNESSES = {"claude", "opencode"}
 TIMEOUT_PROGRAMS = ("timeout", "gtimeout")
@@ -284,6 +284,26 @@ def rewrite(updated: dict[str, object]) -> Output:
     return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "updatedInput": updated}}
 
 
+NATIVE_REFUSAL = (
+    "Blocked: estimate how long this command will take and set the Bash 'timeout' parameter (ms)"
+    " to ~2x that estimate (max 600000), or use run_in_background for long jobs. Then retry."
+)
+WRAPPED_REFUSAL = (
+    "Blocked: estimate how long this command will take and start it with `timeout <seconds>`"
+    " set to ~2x that estimate (max 600), or run it in the background for long jobs. Then retry."
+)
+
+
+def refuse(reason: str) -> Output:
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
+    }
+
+
 def decide(call: dict[str, object], cache: Cache, harness: str = "claude") -> Output | None:
     """The JSON to print for *call*, or None to let it run as written."""
     tool_input = as_object(call.get("tool_input"))
@@ -305,12 +325,14 @@ def decide(call: dict[str, object], cache: Cache, harness: str = "claude") -> Ou
     if timeout:
         cache.record([name for name in (exact, sig) if name], timeout)
         return None
-    timeout = cache.lookup(exact, sig) or DEFAULT_TIMEOUT_MS
-    if native:
-        return rewrite(dict(tool_input, timeout=timeout))
-    program = timeout_program()
-    if program is None:
+    program = None if native else timeout_program()
+    if not native and program is None:
         return None
+    timeout = cache.lookup(exact, sig)
+    if timeout is None:
+        return refuse(WRAPPED_REFUSAL if program else NATIVE_REFUSAL)
+    if program is None:
+        return rewrite(dict(tool_input, timeout=timeout))
     return rewrite(dict(tool_input, command=wrapped(command, timeout, program)))
 
 

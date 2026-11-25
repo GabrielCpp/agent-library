@@ -75,16 +75,38 @@ def wrapped(command: str, seconds: int) -> dict[str, object]:
     }
 
 
-def test_a_call_with_no_timeout_and_no_history_gets_thirty_seconds(cache: Path) -> None:
-    assert output_of(run(cache, "pytest -q")) == rewrite("pytest -q", 30_000)
+def refusal(done: Done) -> str:
+    output = output_of(done)
+    assert isinstance(output, dict)
+    decision = output["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    reason = decision["permissionDecisionReason"]
+    if "Bash 'timeout' parameter" in reason:
+        return "parameter"
+    assert "`timeout <seconds>`" in reason
+    return "prefix"
 
 
-def test_opencode_gets_the_timeout_parameter(cache: Path) -> None:
-    assert output_of(run(cache, "pytest -q", harness="opencode")) == rewrite("pytest -q", 30_000)
+def test_a_call_with_no_timeout_and_no_history_is_refused(cache: Path) -> None:
+    assert refusal(run(cache, "pytest -q")) == "parameter"
+
+
+def test_opencode_is_refused_with_the_timeout_parameter(cache: Path) -> None:
+    assert refusal(run(cache, "pytest -q", harness="opencode")) == "parameter"
+
+
+def test_opencode_gets_the_learned_timeout_parameter(cache: Path) -> None:
+    teach(cache, "pytest -q", 45_000, harness="opencode")
+    assert output_of(run(cache, "pytest -q", harness="opencode")) == rewrite("pytest -q", 45_000)
+
+
+def test_a_harness_without_a_timeout_parameter_is_told_to_prefix_timeout(cache: Path) -> None:
+    assert refusal(run(cache, "pytest -q", harness="copilot")) == "prefix"
 
 
 def test_a_harness_without_a_timeout_parameter_gets_the_command_wrapped(cache: Path) -> None:
     command = "cd /repo && pytest -q 'a b'"
+    teach(cache, command, 30_000)
     assert output_of(run(cache, command, harness="copilot")) == wrapped(command, 30)
 
 
@@ -101,13 +123,11 @@ def test_a_shell_wrapped_in_timeout_teaches_its_script(cache: Path) -> None:
 
 def test_a_timeout_covering_only_the_first_command_does_not_count(cache: Path) -> None:
     command = "timeout 60 make build && make test"
-    assert output_of(run(cache, command, harness="pi")) == wrapped(command, 30)
+    assert refusal(run(cache, command, harness="pi")) == "prefix"
 
 
 def test_a_timeout_parameter_is_ignored_where_the_harness_has_none(cache: Path) -> None:
-    done = output_of(run(cache, "pytest -q", timeout=90_000, harness="copilot"))
-    expected = wrapped("pytest -q", 30)
-    assert done["hookSpecificOutput"]["updatedInput"]["command"] == expected["hookSpecificOutput"]["updatedInput"]["command"]
+    assert refusal(run(cache, "pytest -q", timeout=90_000, harness="copilot")) == "prefix"
 
 
 def test_a_learned_timeout_wraps_in_whole_seconds(cache: Path) -> None:
@@ -123,7 +143,7 @@ def test_a_call_with_a_timeout_passes_untouched(cache: Path) -> None:
 def test_a_background_call_passes_and_teaches_nothing(cache: Path) -> None:
     assert run(cache, "pytest -q", timeout=30_000, background=True).returncode == 0
     assert run(cache, "pytest -q", background=True).returncode == 0
-    assert output_of(run(cache, "pytest -q")) == rewrite("pytest -q", 30_000)
+    assert refusal(run(cache, "pytest -q")) == "parameter"
 
 
 def test_the_same_command_gets_its_last_timeout(cache: Path) -> None:
@@ -148,12 +168,12 @@ def test_the_exact_command_wins_over_its_signature(cache: Path) -> None:
 
 def test_a_different_program_is_not_similar(cache: Path) -> None:
     teach(cache, "pytest -q", 30_000)
-    assert output_of(run(cache, "npm test")) == rewrite("npm test", 30_000)
+    assert refusal(run(cache, "npm test")) == "parameter"
 
 
 def test_history_does_not_cross_working_directories(cache: Path) -> None:
     teach(cache, "pytest -q", 30_000, cwd="/one")
-    assert output_of(run(cache, "pytest -q", cwd="/two")) == rewrite("pytest -q", 30_000)
+    assert refusal(run(cache, "pytest -q", cwd="/two")) == "parameter"
 
 
 def test_only_recent_timeouts_count_for_a_signature(cache: Path) -> None:
@@ -190,7 +210,7 @@ def test_auto_mode_gets_the_same_rewrite(cache: Path) -> None:
 def test_a_corrupt_cache_counts_as_empty_and_is_replaced(cache: Path) -> None:
     cache.parent.mkdir(parents=True)
     _ = cache.write_text("{not json", encoding="utf-8")
-    assert output_of(run(cache, "pytest -q")) == rewrite("pytest -q", 30_000)
+    assert refusal(run(cache, "pytest -q")) == "parameter"
     teach(cache, "pytest -q", 30_000)
     assert output_of(run(cache, "pytest -q")) == rewrite("pytest -q", 30_000)
 
@@ -200,7 +220,7 @@ def test_an_unwritable_cache_falls_back_to_the_default(tmp_path: Path) -> None:
     _ = blocker.write_text("", encoding="utf-8")
     cache = blocker / "require-timeout.json"
     assert run(cache, "pytest -q", timeout=30_000).returncode == 0
-    assert output_of(run(cache, "pytest -q")) == rewrite("pytest -q", 30_000)
+    assert refusal(run(cache, "pytest -q")) == "parameter"
 
 
 def test_input_that_is_not_a_call_passes(cache: Path) -> None:
