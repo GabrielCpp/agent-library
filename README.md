@@ -245,7 +245,7 @@ and the next install puts the library's value back.
 
 Packs are reusable bundles only — a repo's own overlays and workflows are
 selected directly in its `agents.yml` via top-level `skills:` / `workflows:`
-(see `packs/CLAUDE.md`).
+(see `packs/AGENTS.md`).
 
 - `flutter`, `go`, `kmp`, `pulumi`, `react-native`, `react-router`, `rust`, `python-workflow` install the reusable stack skills.
 - `general` comes from stablemate's base library. It installs the language-neutral architecture, testing, UI and method skills that the stack skills build on.

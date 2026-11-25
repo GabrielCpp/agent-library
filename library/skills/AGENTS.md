@@ -70,7 +70,7 @@ Does a generic skill in this library already cover the topic?
 2. **Generic skills are the source of truth.** Changes to shared patterns belong in the generic group so all projects inherit them.
 3. **Project skills add deltas only.** Module path, database engine, auth scheme, naming conventions — anything that diverges from the generic skill.
 4. **Prefix project overlays with the repo name** (`<repo>-<topic>`). Shared workflow prompts cannot name a project overlay. They ask for it by tag with `find_by_tags(...)`.
-5. **Keep packs in sync.** Skills are shipped by `agents/packs/*.yml` path globs; when you move or rename a skill, update the packs in the same change (see `agents/packs/CLAUDE.md`).
+5. **Keep packs in sync.** Skills are shipped by `packs/*.yml` path globs; when you move or rename a skill, update the packs in the same change (see `packs/AGENTS.md`).
 
 ## Example: correct extension pattern
 
