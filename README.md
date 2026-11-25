@@ -14,6 +14,7 @@ Claude, and GitHub Copilot.
 - `packs/*.yml` defines installable bundles.
 - `workflows/<name>/` contains workflow runner assets (YAML graph, prompts, scripts) — the single source of truth for all workflow stages.
 - `library/settings/<name>.json` holds harness settings a home install merges, one top-level key per entry.
+- `templates/stablemate-config.toml` is a starting stablemate home config, with every path under `$HOME`.
 - `farrier` renders selected packs into a target repository.
 
 ## Home Setup On A New Machine
@@ -36,54 +37,29 @@ A repository that needs one declares it in its own `.mcp.json`.
    The `saddlebag-guard` hook runs `saddlebag guard` before every tool call.
    Without saddlebag on the `PATH`, every tool call reports a hook error.
 
-3. Point farrier at both checkouts:
+3. Copy the config template to where stablemate reads its config:
 
    ```bash
-   farrier config set-library ~/Documents/workspace/agent-library
+   mkdir -p "$(dirname "$(farrier config path)")"
    ```
 
    ```bash
-   farrier config set-stablemate ~/Documents/workspace/stablemate
+   cp -n ~/Documents/workspace/agent-library/templates/stablemate-config.toml "$(farrier config path)"
    ```
 
-4. Add this table to `~/.config/stablemate/config.toml`:
+   `farrier config path` prints the file for this platform: `~/.config/stablemate/config.toml`
+   on Linux, `~/Library/Application Support/stablemate/config.toml` on macOS and
+   `%APPDATA%\stablemate\config.toml` on Windows. `$STABLEMATE_CONFIG` overrides it.
+   `cp -n` keeps a config you already have.
 
-   ```toml
-   [user_library.claude]
-   packs = ["general", "stablemate"]
-   roots = ["personal-rules"]
-   hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks"]
-   agents = ["lookup", "worker", "orchestrator", "planner", "e2e-web", "e2e-mobile", "e2e-launchdarkly"]
-   settings = ["claude"]
-
-   [profiles.claude]
-   cli = "claude"
-
-   [profiles.claude.delegates.lookup]
-   model = "claude-haiku-5-5"
-
-   [profiles.claude.delegates.worker]
-   model = "claude-sonnet-5-5"
-
-   [profiles.claude.delegates.planner]
-   model = "claude-opus-5-5"
-
-   [profiles.claude.delegates.orchestrator]
-   model = "claude-opus-5-5"
-
-   [profiles.claude.delegates.e2e-web]
-   model = "claude-sonnet-5-5"
-
-   [profiles.claude.delegates.e2e-mobile]
-   model = "claude-sonnet-5-5"
-
-   [profiles.claude.delegates.e2e-launchdarkly]
-   model = "claude-sonnet-5-5"
-   ```
+4. Read the template before you render with it. Its paths start with `$HOME`, which stablemate
+   expands on each machine, so move them if your checkouts live elsewhere. Its
+   `[user_library.<cli>]` tables choose the packs, hooks, helper agents and settings of each
+   harness home. Its `[profiles.<cli>]` tables name the models each run and each helper agent
+   uses. Delete the tables of a CLI you do not use.
 
    Each helper agent installs on the model its `delegates` table names.
    `e2e-web` and `e2e-mobile` start their Playwright and Maestro servers themselves.
-   `e2e-launchdarkly` connects to the hosted LaunchDarkly MCP server the same way.
    Leave these servers out of every `mcp` table and project config, so no other session starts them.
 
 5. Render the home:
@@ -92,55 +68,17 @@ A repository that needs one declares it in its own `.mcp.json`.
    farrier install --user
    ```
 
-Copilot takes the same home from a `[user_library.copilot]` table. Its settings come from
-`library/settings/copilot.json`, and its model names use dots, as in `claude-opus-5.5`:
+Copilot takes the same home from the template's `[user_library.copilot]` table. Its settings
+come from `library/settings/copilot.json`, and its model names use dots, as in `claude-opus-5.5`.
 
-```toml
-[user_library.copilot]
-packs = ["general", "stablemate"]
-roots = ["personal-rules"]
-hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks", "clock"]
-agents = ["lookup", "worker", "orchestrator", "planner", "e2e-web", "e2e-mobile"]
-settings = ["copilot"]
-
-[profiles.copilot]
-cli = "copilot"
-
-[profiles.copilot.delegates.lookup]
-model = "claude-haiku-5.5"
-
-[profiles.copilot.delegates.worker]
-model = "claude-sonnet-5.5"
-
-[profiles.copilot.delegates.planner]
-model = "claude-opus-5.5"
-
-[profiles.copilot.delegates.orchestrator]
-model = "claude-opus-5.5"
-
-[profiles.copilot.delegates.e2e-web]
-model = "claude-sonnet-5.5"
-
-[profiles.copilot.delegates.e2e-mobile]
-model = "claude-sonnet-5.5"
-```
-
-Copilot's shell tool takes no timeout, so `require-timeout` wraps each command in `timeout`.
+Copilot's shell tool takes no timeout, so `require-timeout` refuses a command until it starts with
+`timeout <seconds>`, then wraps the same command in the timeout it learned.
 The `clock` guard reads the request time from Copilot's session log. Copilot documents `~/.copilot/settings.json` as JSONC.
 A comment written there stops the install, so keep that file plain JSON.
 
-Codex takes its settings from `library/settings/codex.json`. Farrier merges each key into
-`~/.codex/config.toml` and keeps your trusted projects, providers and comments there:
-
-```toml
-[user_library.codex]
-packs = ["general", "stablemate"]
-roots = ["personal-rules"]
-hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks"]
-agents = ["lookup", "worker"]
-mcp = ["playwright", "maestro"]
-settings = ["codex"]
-```
+Codex takes its settings from `library/settings/codex.json` and its home from the template's
+`[user_library.codex]` table. Farrier merges each key into `~/.codex/config.toml` and keeps your
+trusted projects, providers and comments there.
 
 Farrier owns `[features]` whole, so add no key of your own under it.
 

@@ -1,0 +1,212 @@
+config_version = 2
+default_cli = "claude"
+library_dir = "$HOME/Documents/workspace/agent-library"
+stablemate_dir = "$HOME/Documents/workspace/stablemate"
+worktree_dir = "$HOME/Documents/worktrees"
+artifacts_dir = "$HOME/Documents/ai-artifacts"
+paddock_dir = "$HOME/Documents/ai-artifacts/benchmarks"
+
+[cli.opencode.env]
+OPENCODE_CONFIG_CONTENT = "{\"small_model\":\"minimax/MiniMax-M2.7\"}"
+OTEL_SDK_DISABLED = "true"
+
+[profiles.opencode]
+cli = "opencode"
+
+[profiles.opencode.powers.high]
+model = "minimax/MiniMax-M3"
+effort = "high"
+timeout_scale = 3.0
+
+[profiles.opencode.powers.medium]
+model = "minimax/MiniMax-M3"
+effort = "medium"
+timeout_scale = 3.0
+
+[profiles.opencode.powers.low]
+model = "minimax/MiniMax-M2.7"
+effort = "low"
+timeout_scale = 3.0
+
+[profiles.opencode.powers.max]
+model = "minimax/MiniMax-M3"
+effort = "high"
+timeout_scale = 3.0
+
+[profiles.opencode.powers.ultra]
+model = "minimax/MiniMax-M3"
+effort = "xhigh"
+timeout_scale = 3.0
+
+[profiles.opencode.default]
+model = "minimax/MiniMax-M3"
+effort = "medium"
+timeout_scale = 3.0
+
+[profiles.claude]
+cli = "claude"
+
+[profiles.claude.powers.high]
+model = "claude-sonnet-5-5"
+effort = "high"
+
+[profiles.claude.powers.max]
+model = "claude-opus-5-5"
+effort = "high"
+
+[profiles.claude.powers.ultra]
+model = "claude-opus-5-5"
+effort = "high"
+
+[profiles.claude.powers.medium]
+model = "claude-sonnet-5-5"
+effort = "medium"
+
+[profiles.claude.powers.low]
+model = "claude-haiku-5-5"
+effort = "medium"
+
+[profiles.claude.default]
+model = "claude-sonnet-5-5"
+effort = "medium"
+
+[profiles.codex]
+cli = "codex"
+
+[profiles.codex.powers.high]
+model = "@gpt-6.2-sol"
+effort = "high"
+
+[profiles.codex.powers.max]
+model = "@gpt-6.2-sol"
+effort = "xhigh"
+
+[profiles.codex.powers.ultra]
+model = "@gpt-6.2-astra"
+effort = "high"
+
+[profiles.codex.powers.medium]
+model = "@gpt-6.2-sol"
+effort = "medium"
+
+[profiles.codex.powers.low]
+model = "@gpt-6-luna"
+effort = "low"
+
+[profiles.codex.default]
+model = "@gpt-6.2-sol"
+effort = "medium"
+
+[groom.attend]
+mode = "off"
+last_mode = "headless"
+cli = "claude"
+deny = []
+
+[groom.dispatch.loop-runner]
+command = "workhorse-loop-runner"
+concurrency = 1
+
+[[groom.dispatch.loop-runner.params]]
+name = "plan"
+label = "Plan path"
+required = true
+template = "/goal implement all phases of plan {value}. Commit your work before finishing"
+
+[[groom.dispatch.loop-runner.params]]
+name = "cli"
+label = "Agent CLI"
+type = "select"
+
+[user_library.claude]
+packs = [
+    "general",
+    "stablemate",
+]
+roots = ["personal-rules"]
+hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks", "clock", "method-skill-edits", "follow-up-check"]
+agents = ["lookup", "worker", "orchestrator", "planner", "e2e-web", "e2e-mobile"]
+mcp = ["groom"]
+settings = ["claude"]
+
+[user_library.codex]
+packs = [
+    "general",
+    "stablemate",
+]
+roots = ["personal-rules"]
+hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks", "clock"]
+agents = ["lookup", "worker"]
+mcp = ["playwright", "maestro"]
+settings = ["codex"]
+
+[user_library.copilot]
+packs = [
+    "general",
+    "stablemate",
+]
+roots = ["personal-rules"]
+hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks", "clock"]
+agents = ["lookup", "worker", "orchestrator", "planner", "e2e-web", "e2e-mobile"]
+settings = ["copilot"]
+
+[user_library.opencode]
+roots = ["personal-rules"]
+hooks = ["forbidden-shapes", "require-timeout", "saddlebag-guard", "commit-checks", "clock"]
+agents = ["lookup", "worker"]
+mcp = ["maestro"]
+
+[profiles.codex.delegates.lookup]
+model = "@gpt-6-luna"
+effort = "low"
+
+[profiles.codex.delegates.worker]
+model = "@gpt-6.2-sol"
+effort = "medium"
+
+[profiles.opencode.delegates.lookup]
+model = "kimi-code-plan-global/k3"
+effort = "medium"
+
+[profiles.opencode.delegates.worker]
+model = "kimi-code-plan-global/k3.1-pro"
+effort = "medium"
+
+[profiles.claude.delegates.lookup]
+model = "claude-haiku-5-5"
+
+[profiles.claude.delegates.orchestrator]
+model = "claude-opus-5-5"
+
+[profiles.claude.delegates.planner]
+model = "claude-opus-5-5"
+
+[profiles.claude.delegates.worker]
+model = "claude-sonnet-5-5"
+
+[profiles.claude.delegates.e2e-web]
+model = "claude-sonnet-5-5"
+
+[profiles.claude.delegates.e2e-mobile]
+model = "claude-sonnet-5-5"
+
+[profiles.copilot]
+cli = "copilot"
+
+[profiles.copilot.delegates.lookup]
+model = "claude-haiku-5.5"
+
+[profiles.copilot.delegates.orchestrator]
+model = "claude-opus-5.5"
+
+[profiles.copilot.delegates.planner]
+model = "claude-opus-5.5"
+
+[profiles.copilot.delegates.worker]
+model = "claude-sonnet-5.5"
+
+[profiles.copilot.delegates.e2e-web]
+model = "claude-sonnet-5.5"
+
+[profiles.copilot.delegates.e2e-mobile]
+model = "claude-sonnet-5.5"
