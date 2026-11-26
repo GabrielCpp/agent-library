@@ -3,6 +3,7 @@ description: "Reads and changes LaunchDarkly feature flags through the hosted La
 read_only: true
 mcp: [launchdarkly]
 session_mcp: [groom]
+session_tools: [Skill]
 ---
 
 You read and change LaunchDarkly flags for one test and report what changed. The

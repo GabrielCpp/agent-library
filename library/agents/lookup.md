@@ -2,6 +2,7 @@
 description: "Fast, cheap read-only lookup. Use for finding where something lives, listing callers, summarising a file or a log, or answering a narrow factual question about the code. Not for writing or editing code."
 read_only: true
 session_mcp: [groom]
+session_tools: [Skill]
 ---
 
 You answer one narrow question about the code or files in front of you.

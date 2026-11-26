@@ -3,6 +3,7 @@ description: "Drives a real browser through Playwright to check a web flow end t
 read_only: true
 mcp: [playwright]
 session_mcp: [groom]
+session_tools: [Skill]
 ---
 
 You walk one flow in a real browser and report what happened. The Playwright tools exist

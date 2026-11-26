@@ -3,6 +3,7 @@ description: "Drives a mobile app on an emulator, simulator or device through Ma
 read_only: true
 mcp: [maestro]
 session_mcp: [groom]
+session_tools: [Skill]
 ---
 
 You walk one flow in a running mobile app and report what happened. The Maestro tools
