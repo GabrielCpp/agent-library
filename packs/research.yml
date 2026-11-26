@@ -1,15 +1,9 @@
 description: >
-  Autonomous researcher — PyTorch experiment-engineering and research-method
-  skills, the gate-loop agent prompts (select / implement / gate-check / rework /
-  record / lead-review), and the single generic `research` workflow graph run by
-  local-worker. One workflow drives any research program; each program lives in
+  Autonomous researcher. The single generic `research` workflow graph, run by
+  local-worker, which carries its own gate-loop prompts. One workflow drives any research program; each program lives in
   the target repo as a folder with a co-located `program.yml` manifest (1 folder =
   1 program). The default is the dir in `<repo>/.agents/program`; override per run
   with the `program` param (--params '{"program": "specs/<dir>"}'). Install into
   any repo that runs numerically-gated research programs.
-skills:
-  - research/*
-prompts:
-  - research/*
 workflows:
   - research
