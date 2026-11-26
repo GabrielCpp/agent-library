@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a skill, hook, pack or change the library does not have.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >-
+        What does your agent get wrong or keep missing today? Describe the situation rather
+        than the fix.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: Optional. The skill, rule or hook you would expect, and where it would live.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: Optional. A workaround that almost works often shows the real gap.

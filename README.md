@@ -1,9 +1,13 @@
 # Agents Prompt Library
 
+[![ci](https://github.com/GabrielCpp/agent-library/actions/workflows/ci.yml/badge.svg)](https://github.com/GabrielCpp/agent-library/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 This directory is the canonical multi-repository agent toolkit. It stores source
 skills, prompts, root instructions, optional workflows, and pack definitions.
-The installer renders those sources into the adapter folders expected by Codex,
-Claude, and GitHub Copilot.
+The installer, [farrier](https://github.com/GabrielCpp/stablemate/tree/main/farrier)
+from [stablemate](https://github.com/GabrielCpp/stablemate), renders those sources into
+the adapter folders expected by Codex, Claude, and GitHub Copilot.
 
 ## Layout
 
@@ -363,3 +367,13 @@ for `template` for compatibility, but new configs should prefer `template`.
 The optional `story-coder` pack installs the unified coder workflow, which assumes the shared docs lifecycle contract under
 `docs/epics/**` and `docs/specs/**`. It supports two modes via the `mode` input: `story` (single story, no queue/CI) and `epic` (multi-story queue + CI/PR gating).
 Repository-specific execution details live under `agents.yml` at `workflow.epicCoder`: mode, optional epic queue path, generated prompt names, Docker image/container path, QA preflight service/CLI settings, success-gate commands, and autonomous unblock budgets.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request. Report a
+vulnerability through [SECURITY.md](SECURITY.md), not a public issue. Everyone who takes
+part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+The library is released under the [MIT License](LICENSE).

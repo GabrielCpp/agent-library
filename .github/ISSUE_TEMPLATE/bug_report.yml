@@ -1,0 +1,57 @@
+name: Bug report
+description: A skill, prompt, hook or pack misleads an agent or fails to install.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report security vulnerabilities here. See
+        [SECURITY.md](https://github.com/GabrielCpp/agent-library/blob/main/SECURITY.md).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - skill
+        - prompt
+        - hook
+        - helper agent
+        - pack
+        - settings
+        - scaffold
+        - other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: item
+    attributes:
+      label: Item
+      description: The skill, hook or pack name, or its path in the library.
+      placeholder: library/hooks/require-timeout
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected the agent or the install to do, and what it did instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The commands, prompt or tool call that shows it. Redact anything private first.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Agent CLI, farrier version and OS
+      placeholder: Claude Code 2.x, farrier 1.4.0, Ubuntu 24.04
+    validations:
+      required: true
