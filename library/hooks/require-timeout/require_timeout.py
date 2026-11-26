@@ -3,8 +3,8 @@
 
 The guard reads one PreToolUse call on stdin. A call that runs in the background passes,
 unless it polls. A polling call runs ``until``, ``while`` or ``pgrep`` as a command, or in a
-``bash -c`` script, and it can wait forever. It must start with ``timeout <duration>``, which
-bounds all of it, or the guard refuses it.
+``bash -c`` script, and it can wait forever. Each poll must sit inside a ``timeout <duration>``
+command, or the guard refuses the call.
 
 A foreground call that sets a timeout passes, and the guard records that timeout in its
 cache under two keys for the call's working directory: the command as written, and its
@@ -128,21 +128,33 @@ def signature(command: str) -> str | None:
     return " ; ".join(parts) or None
 
 
-def polls(command: str) -> bool:
-    """Whether *command*, or a shell script it passes with ``-c``, runs a poll as a command."""
+def segment_end(tokens: list[str], start: int) -> int:
+    return next((i for i in range(start, len(tokens)) if tokens[i] in SEPARATORS), len(tokens))
+
+
+def unbounded_poll(command: str) -> bool:
+    """Whether *command* runs ``until``, ``while`` or ``pgrep`` outside a ``timeout``.
+
+    A shell script passed with ``-c`` counts as part of *command*.
+    """
     tokens = tokens_of(command)
     if tokens is None:
         return False
     at_command = True
-    for index, token in enumerate(tokens):
-        after_shell = index >= 2 and os.path.basename(tokens[index - 2]) in SHELLS
-        if after_shell and tokens[index - 1] == "-c" and polls(token):
-            return True
-        if at_command and ASSIGNMENT.match(token):
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if at_command and timed(tokens[index:segment_end(tokens, index)]):
+            index = segment_end(tokens, index)
             continue
+        after_shell = index >= 2 and os.path.basename(tokens[index - 2]) in SHELLS
+        if after_shell and tokens[index - 1] == "-c" and unbounded_poll(token):
+            return True
         if at_command and os.path.basename(token) in POLL_PROGRAMS:
             return True
-        at_command = token in SEPARATORS or (at_command and token in COMMAND_PREFIXES)
+        if not (at_command and ASSIGNMENT.match(token)):
+            at_command = token in SEPARATORS or (at_command and token in COMMAND_PREFIXES)
+        index += 1
     return False
 
 
@@ -263,6 +275,19 @@ def duration_ms(word: str) -> int | None:
     return valid_timeout(seconds * 1000)
 
 
+def timed(words: list[str]) -> tuple[int, list[str]] | None:
+    """The timeout a simple command starting with ``timeout <duration>`` sets, and what it runs."""
+    if not words or os.path.basename(words[0]) not in TIMEOUT_PROGRAMS:
+        return None
+    index = 1
+    while index < len(words) and words[index].startswith("-"):
+        index += 2 if words[index] in TIMEOUT_VALUE_OPTIONS else 1
+    if index + 1 >= len(words):
+        return None
+    timeout = duration_ms(words[index])
+    return None if timeout is None else (timeout, words[index + 1:])
+
+
 def own_timeout(command: str) -> tuple[int, str] | None:
     """The timeout a leading ``timeout <duration>`` sets on all of *command*, and what it runs."""
     tokens = tokens_of(command)
@@ -270,17 +295,10 @@ def own_timeout(command: str) -> tuple[int, str] | None:
         return None
     while tokens and ASSIGNMENT.match(tokens[0]):
         tokens = tokens[1:]
-    if not tokens or os.path.basename(tokens[0]) not in TIMEOUT_PROGRAMS:
+    bounded = timed(tokens)
+    if bounded is None:
         return None
-    index = 1
-    while index < len(tokens) and tokens[index].startswith("-"):
-        index += 2 if tokens[index] in TIMEOUT_VALUE_OPTIONS else 1
-    if index + 1 >= len(tokens):
-        return None
-    timeout = duration_ms(tokens[index])
-    if timeout is None:
-        return None
-    inner = tokens[index + 1:]
+    timeout, inner = bounded
     if len(inner) == 3 and os.path.basename(inner[0]) in SHELLS and inner[1] == "-c":
         return timeout, inner[2]
     return timeout, shlex.join(inner)
@@ -315,8 +333,8 @@ NATIVE_REFUSAL = (
 )
 POLL_REFUSAL = (
     "Blocked: this background command polls (until, while or pgrep) and could wait forever."
-    " Start it with `timeout <duration> bash -c '...'`, set to the longest wait you accept,"
-    " so the timeout bounds the whole command. Then retry."
+    " Wrap each poll as `timeout <duration> bash -c '...'`, set to the longest wait you accept."
+    " Then retry."
 )
 WRAPPED_REFUSAL = (
     "Blocked: estimate how long this command will take and start it with `timeout <seconds>`"
@@ -343,8 +361,7 @@ def decide(call: dict[str, object], cache: Cache, harness: str = "claude") -> Ou
     if not isinstance(command, str) or not command.strip():
         return None
     if tool_input.get("run_in_background") is True:
-        bounded = own_timeout(command) is not None
-        return refuse(POLL_REFUSAL) if polls(command) and not bounded else None
+        return refuse(POLL_REFUSAL) if unbounded_poll(command) else None
     cwd = call.get("cwd")
     cwd = cwd if isinstance(cwd, str) and cwd else os.getcwd()
     native = harness in NATIVE_HARNESSES

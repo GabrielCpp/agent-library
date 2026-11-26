@@ -173,6 +173,8 @@ def test_a_background_poll_is_refused_on_every_harness(cache: Path, harness: str
     "timeout 3h bash -c 'until pgrep -f server; do sleep 5; done'",
     "timeout -k 10 90m sh -c 'while true; do make check; sleep 60; done'",
     "timeout 10m pgrep -f vite",
+    "timeout 3s bash -c 'until pgrep x; do sleep 1; done'; echo \"exit=$?\"",
+    "cd /repo && FOO=1 timeout 1h bash -c 'while true; do sleep 1; done' && make report",
 ])
 def test_a_background_poll_inside_a_timeout_passes(cache: Path, command: str) -> None:
     done = run(cache, command, background=True)
