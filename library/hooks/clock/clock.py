@@ -4,7 +4,7 @@
 The hook reads one PreToolUse call on stdin. It finds the newest request of the session, or
 else the first time it saw the session. ``--harness`` says where the session keeps its
 requests. In a Claude transcript a request is a human prompt. In a Codex transcript it is a
-turn that no other turn started. In Copilot's session log under ``$COPILOT_HOME``, else
+turn that no other turn started. In an Antigravity transcript it is a step the user wrote. In Copilot's session log under ``$COPILOT_HOME``, else
 ``~/.copilot``, it is a user message with no other source. In OpenCode's database under
 ``$XDG_DATA_HOME/opencode``, it is a user message of the root session with a text part
 OpenCode did not write itself. Once the interval has
@@ -88,8 +88,12 @@ def is_codex_request(entry: dict[str, object]) -> bool:
     return attribution.get("parent_turn_id") is None
 
 
+def is_antigravity_request(entry: dict[str, object]) -> bool:
+    return entry.get("source") == "USER_EXPLICIT" and entry.get("type") == "USER_INPUT"
+
+
 def is_request(entry: dict[str, object]) -> bool:
-    return is_human_prompt(entry) or is_codex_request(entry)
+    return is_human_prompt(entry) or is_codex_request(entry) or is_antigravity_request(entry)
 
 
 def parse_time(stamp: str) -> float:
@@ -114,7 +118,7 @@ def newest_request(path: Path, accepts: Callable[[dict[str, object]], bool]) -> 
             for line in lines:
                 try:
                     entry = as_object(parse_json(line))
-                    stamp = entry.get("timestamp") if entry else None
+                    stamp = (entry.get("timestamp") or entry.get("created_at")) if entry else None
                     if entry and accepts(entry) and isinstance(stamp, str):
                         found = parse_time(stamp)
                 except ValueError:

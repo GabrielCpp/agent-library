@@ -154,6 +154,24 @@ def test_a_codex_turn_a_parent_turn_started_is_not_the_request(tmp_path: Path) -
     assert run(tmp_path, START + 50 * MIN, log).returncode == 2
 
 
+def agy_step(epoch: float, source: str, kind: str) -> dict[str, object]:
+    created = datetime.fromtimestamp(epoch, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"step_index": 0, "source": source, "type": kind, "status": "DONE", "created_at": created}
+
+
+def test_an_antigravity_user_step_is_the_request(tmp_path: Path) -> None:
+    log = write(tmp_path / "transcript_full.jsonl", [
+        agy_step(START, "USER_EXPLICIT", "USER_INPUT"),
+        agy_step(START + 60 * MIN, "USER_EXPLICIT", "USER_INPUT"),
+        agy_step(START + 100 * MIN, "SYSTEM", "SYSTEM_MESSAGE"),
+        agy_step(START + 101 * MIN, "MODEL", "PLANNER_RESPONSE"),
+    ])
+    assert run(tmp_path, START + 104 * MIN, log, harness="antigravity").returncode == 0
+    done = run(tmp_path, START + 106 * MIN, log, harness="antigravity")
+    assert done.returncode == 2
+    assert "Clock: 46 min since the request" in done.stderr
+
+
 def copilot_message(epoch: float, source: str | None = None) -> dict[str, object]:
     data: dict[str, object] = {"content": "do the thing"}
     if source:
