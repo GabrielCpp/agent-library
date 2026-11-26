@@ -146,6 +146,58 @@ def test_a_background_call_passes_and_teaches_nothing(cache: Path) -> None:
     assert refusal(run(cache, "pytest -q")) == "parameter"
 
 
+def poll_refusal(done: Done) -> bool:
+    output = output_of(done)
+    assert isinstance(output, dict)
+    decision = output["hookSpecificOutput"]
+    return decision["permissionDecision"] == "deny" and "timeout <duration>" in decision["permissionDecisionReason"]
+
+
+@pytest.mark.parametrize("command", [
+    "until pgrep -f server; do sleep 5; done",
+    "while ! curl -sf localhost:8080; do sleep 2; done && echo up",
+    "cd /repo && while true; do make check; sleep 60; done",
+    "pgrep -f vite",
+    "for f in a b; do until test -e $f; do sleep 1; done; done",
+])
+def test_a_background_poll_without_a_timeout_is_refused(cache: Path, command: str) -> None:
+    assert poll_refusal(run(cache, command, background=True))
+
+
+@pytest.mark.parametrize("harness", [None, "copilot"])
+def test_a_background_poll_is_refused_on_every_harness(cache: Path, harness: str | None) -> None:
+    assert poll_refusal(run(cache, "until pgrep x; do sleep 1; done", background=True, harness=harness))
+
+
+@pytest.mark.parametrize("command", [
+    "timeout 3h bash -c 'until pgrep -f server; do sleep 5; done'",
+    "timeout -k 10 90m sh -c 'while true; do make check; sleep 60; done'",
+    "timeout 10m pgrep -f vite",
+])
+def test_a_background_poll_inside_a_timeout_passes(cache: Path, command: str) -> None:
+    done = run(cache, command, background=True)
+    assert (done.returncode, done.stdout) == (0, ""), done.stderr
+
+
+@pytest.mark.parametrize("command", [
+    "timeout 0 bash -c 'until pgrep x; do sleep 1; done'",
+    "timeout 60 pgrep x; while true; do sleep 1; done",
+])
+def test_a_timeout_that_does_not_bound_the_poll_is_refused(cache: Path, command: str) -> None:
+    assert poll_refusal(run(cache, command, background=True))
+
+
+@pytest.mark.parametrize("command", [
+    "pytest -q",
+    "echo while until pgrep",
+    "grep -rn 'while true' src",
+    "git log --grep=until",
+])
+def test_a_background_call_that_only_names_a_poll_word_passes(cache: Path, command: str) -> None:
+    done = run(cache, command, background=True)
+    assert (done.returncode, done.stdout) == (0, ""), done.stderr
+
+
 def test_the_same_command_gets_its_last_timeout(cache: Path) -> None:
     teach(cache, "pytest -q", 30_000)
     teach(cache, "pytest -q", 90_000)
@@ -231,3 +283,7 @@ def test_input_that_is_not_a_call_passes(cache: Path) -> None:
             env=environ, check=False,
         )
         assert done.returncode == 0
+
+
+def test_a_background_shell_script_that_polls_is_refused(cache: Path) -> None:
+    assert poll_refusal(run(cache, "nohup bash -c 'while true; do sleep 1; done'", background=True))

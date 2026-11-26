@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Make every foreground shell call carry a timeout, filling it from past calls when it can.
 
-The guard reads one PreToolUse call on stdin. A call that runs in the background passes.
-A call that sets a timeout passes, and the guard records that timeout in its cache under
-two keys for the call's working directory: the command as written, and its signature.
+The guard reads one PreToolUse call on stdin. A call that runs in the background passes,
+unless it polls. A polling call runs ``until``, ``while`` or ``pgrep`` as a command, or in a
+``bash -c`` script, and it can wait forever. It must start with ``timeout <duration>``, which
+bounds all of it, or the guard refuses it.
+
+A foreground call that sets a timeout passes, and the guard records that timeout in its
+cache under two keys for the call's working directory: the command as written, and its
+signature.
 A signature keeps each simple command's program and the plain words after it, so
 ``pytest -q tests/a.py`` and ``pytest -q tests/b.py`` share ``pytest -q``.
 
@@ -58,6 +63,8 @@ ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 HEREDOC_BODY = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1.*?\n\t*\2(?=\n|$)", re.DOTALL)
 PLAIN_WORD = re.compile(r"^-{0,2}[A-Za-z][A-Za-z0-9_.:-]*$")
 SKIPPED_PROGRAMS = {"cd", "pushd", "popd", "export", "set", "echo", "true", ":"}
+POLL_PROGRAMS = {"until", "while", "pgrep"}
+COMMAND_PREFIXES = {"do", "then", "else", "elif", "if", "while", "until", "!", "{", "time"}
 
 
 def cache_path() -> Path:
@@ -119,6 +126,24 @@ def signature(command: str) -> str | None:
         else:
             words.append(token)
     return " ; ".join(parts) or None
+
+
+def polls(command: str) -> bool:
+    """Whether *command*, or a shell script it passes with ``-c``, runs a poll as a command."""
+    tokens = tokens_of(command)
+    if tokens is None:
+        return False
+    at_command = True
+    for index, token in enumerate(tokens):
+        after_shell = index >= 2 and os.path.basename(tokens[index - 2]) in SHELLS
+        if after_shell and tokens[index - 1] == "-c" and polls(token):
+            return True
+        if at_command and ASSIGNMENT.match(token):
+            continue
+        if at_command and os.path.basename(token) in POLL_PROGRAMS:
+            return True
+        at_command = token in SEPARATORS or (at_command and token in COMMAND_PREFIXES)
+    return False
 
 
 def keys(cwd: str, command: str) -> tuple[str, str | None]:
@@ -288,6 +313,11 @@ NATIVE_REFUSAL = (
     "Blocked: estimate how long this command will take and set the Bash 'timeout' parameter (ms)"
     " to ~2x that estimate (max 600000), or use run_in_background for long jobs. Then retry."
 )
+POLL_REFUSAL = (
+    "Blocked: this background command polls (until, while or pgrep) and could wait forever."
+    " Start it with `timeout <duration> bash -c '...'`, set to the longest wait you accept,"
+    " so the timeout bounds the whole command. Then retry."
+)
 WRAPPED_REFUSAL = (
     "Blocked: estimate how long this command will take and start it with `timeout <seconds>`"
     " set to ~2x that estimate (max 600), or run it in the background for long jobs. Then retry."
@@ -307,11 +337,14 @@ def refuse(reason: str) -> Output:
 def decide(call: dict[str, object], cache: Cache, harness: str = "claude") -> Output | None:
     """The JSON to print for *call*, or None to let it run as written."""
     tool_input = as_object(call.get("tool_input"))
-    if tool_input is None or tool_input.get("run_in_background") is True:
+    if tool_input is None:
         return None
     command = tool_input.get("command")
     if not isinstance(command, str) or not command.strip():
         return None
+    if tool_input.get("run_in_background") is True:
+        bounded = own_timeout(command) is not None
+        return refuse(POLL_REFUSAL) if polls(command) and not bounded else None
     cwd = call.get("cwd")
     cwd = cwd if isinstance(cwd, str) and cwd else os.getcwd()
     native = harness in NATIVE_HARNESSES
