@@ -165,7 +165,7 @@ has open and diffs it against a manifest you write.
   ```json
   [
     {
-      "selector": "table tbody tr:has-text('gabriel-test')",
+      "selector": "table tbody tr:has-text('e2e-test')",
       "role": "row",
       "bbox": { "x": 214, "y": 768, "width": 852, "height": 44 },
       "visible": true
