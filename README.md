@@ -75,8 +75,9 @@ A repository that needs one declares it in its own `.mcp.json`.
 Copilot takes the same home from the template's `[user_library.copilot]` table. Its settings
 come from `library/settings/copilot.json`, and its model names use dots, as in `claude-opus-5.5`.
 
-Copilot's shell tool takes no timeout, so `require-timeout` refuses a command until it starts with
-`timeout <seconds>`, then wraps the same command in the timeout it learned.
+Copilot's shell tool takes no timeout, so `require-timeout` refuses a command until each of its
+pipelines starts with `timeout <seconds>` or runs only builtins such as `cd`.
+It then wraps the same command in the timeout it learned.
 The `clock` guard reads the request time from Copilot's session log. Copilot documents `~/.copilot/settings.json` as JSONC.
 A comment written there stops the install, so keep that file plain JSON.
 

@@ -121,6 +121,39 @@ def test_a_shell_wrapped_in_timeout_teaches_its_script(cache: Path) -> None:
     assert output_of(run(cache, "cd /repo && make all", harness="copilot")) == wrapped("cd /repo && make all", 45)
 
 
+@pytest.mark.parametrize("command", [
+    "timeout 30 curl -s 'https://x.test/a?b=1&c=2' | jq .",
+    "cd /repo && timeout 30 curl -s https://x.test/a",
+    "cd /repo && FOO=1 timeout 30 bash -c 'make all' 2>&1 | tail -5",
+    "export A=1; timeout 10 make build && timeout 20 make test",
+])
+def test_a_command_bounded_by_its_own_timeouts_passes(cache: Path, command: str) -> None:
+    teach(cache, command, harness="copilot")
+
+
+@pytest.mark.parametrize("command", [
+    "echo hi | make all",
+    "cd /repo && make all",
+    "timeout 30 curl -s x $(cat list)",
+])
+def test_a_command_with_an_untimed_step_is_refused(cache: Path, command: str) -> None:
+    assert refusal(run(cache, command, harness="copilot")) == "prefix"
+
+
+@pytest.mark.parametrize(("command", "timeout"), [
+    ("timeout 30 curl -s https://x.test/a", 35_000),
+    ("cd /repo && timeout 30 bash -c 'curl -s x | jq .'", 35_000),
+    ("timeout 10 make build && timeout 20 make test", 35_000),
+])
+def test_claude_gets_the_parameter_from_the_commands_own_timeout(cache: Path, command: str, timeout: int) -> None:
+    assert output_of(run(cache, command)) == rewrite(command, timeout)
+
+
+def test_a_timed_step_teaches_the_command_it_runs(cache: Path) -> None:
+    teach(cache, "cd /repo && timeout 30 curl -s https://x.test/a", harness="pi")
+    assert output_of(run(cache, "curl -s https://x.test/b")) == rewrite("curl -s https://x.test/b", 30_000)
+
+
 def test_a_timeout_covering_only_the_first_command_does_not_count(cache: Path) -> None:
     command = "timeout 60 make build && make test"
     assert refusal(run(cache, command, harness="pi")) == "prefix"

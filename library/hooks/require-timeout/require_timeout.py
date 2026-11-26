@@ -19,9 +19,14 @@ about is refused, so the agent estimates its own timeout and retries.
 ``--harness`` names the harness that runs the guard. Claude and OpenCode carry a timeout
 parameter, so the guard rewrites that parameter and leaves the command alone. Claude's auto
 mode accepts that rewrite, because the command its review saw is unchanged. Every other
-harness gets the command wrapped in coreutils ``timeout``. There a command that already
-starts with ``timeout <duration>`` sets its own timeout, and the guard learns it for the
-command it wraps. A machine with no ``timeout`` or ``gtimeout`` leaves the command as is.
+harness gets the command wrapped in coreutils ``timeout``. A machine with no ``timeout`` or
+``gtimeout`` leaves the command as is.
+
+A command can bound itself with ``timeout <duration>``. Each of its pipelines must start
+with a timed command, or run only instant builtins such as ``cd`` and ``export``, so
+``cd /repo && timeout 30 curl -s url | jq .`` bounds itself. Such a command passes on every
+harness, and the guard learns the sum of its durations. Claude and OpenCode also get that
+sum, plus a kill margin, as their timeout parameter when the call sets none.
 
 The cache lives in ``$REQUIRE_TIMEOUT_CACHE``, else ``$XDG_CACHE_HOME/agent-hooks``, else
 ``~/.cache/agent-hooks``. A cache the guard cannot read counts as empty.
@@ -58,6 +63,7 @@ MAX_ENTRIES = 1000
 RECENT = 5
 SIGNATURE_WORDS = 3
 SEPARATORS = {"&&", "||", ";", ";;", "|", "|&", "&", "(", ")", "\n"}
+PIPES = {"|", "|&"}
 REDIRECT = re.compile(r"^(?:\d*|&)(?:>>?|<<?<?|>\||<>|>&|<&)$")
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 HEREDOC_BODY = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1.*?\n\t*\2(?=\n|$)", re.DOTALL)
@@ -87,6 +93,9 @@ def segment_signature(words: list[str]) -> str | None:
     program = os.path.basename(words[0])
     if program in SKIPPED_PROGRAMS:
         return None
+    bounded = timed(words)
+    if bounded is not None:
+        return segment_signature(bounded[1])
     kept = [program]
     for word in words[1:]:
         if len(kept) > SIGNATURE_WORDS or not PLAIN_WORD.match(word):
@@ -288,11 +297,51 @@ def timed(words: list[str]) -> tuple[int, list[str]] | None:
     return None if timeout is None else (timeout, words[index + 1:])
 
 
+def pipelines(tokens: list[str]) -> list[list[list[str]]]:
+    """The pipelines in *tokens*, each a list of its stages' words."""
+    found: list[list[list[str]]] = [[[]]]
+    for token in tokens:
+        if token in PIPES:
+            found[-1].append([])
+        elif token in SEPARATORS:
+            found.append([[]])
+        else:
+            found[-1][-1].append(token)
+    return [[stage for stage in line if stage] for line in found if any(line)]
+
+
+def stage_bound(words: list[str]) -> int | None:
+    """The time *words* may run: 0 for an instant builtin, a ``timeout`` duration, or None."""
+    while words and ASSIGNMENT.match(words[0]):
+        words = words[1:]
+    if not words or os.path.basename(words[0]) in SKIPPED_PROGRAMS:
+        return 0
+    bounded = timed(words)
+    return None if bounded is None else bounded[0]
+
+
 def own_timeout(command: str) -> tuple[int, str] | None:
-    """The timeout a leading ``timeout <duration>`` sets on all of *command*, and what it runs."""
+    """The total time the ``timeout`` commands inside *command* allow it, and what to learn it for.
+
+    Every pipeline must start with a timed command, or run only instant builtins.
+    A command that is one timed simple command teaches what it runs.
+    """
     tokens = tokens_of(command)
-    if not tokens or any(token in SEPARATORS for token in tokens):
+    if not tokens:
         return None
+    total = 0
+    for line in pipelines(tokens):
+        bounds = [stage_bound(stage) for stage in line]
+        if bounds[0]:
+            total += bounds[0]
+        elif all(bound == 0 for bound in bounds):
+            continue
+        else:
+            return None
+    if not total:
+        return None
+    if any(token in SEPARATORS for token in tokens):
+        return total, command
     while tokens and ASSIGNMENT.match(tokens[0]):
         tokens = tokens[1:]
     bounded = timed(tokens)
@@ -365,16 +414,17 @@ def decide(call: dict[str, object], cache: Cache, harness: str = "claude") -> Ou
     cwd = call.get("cwd")
     cwd = cwd if isinstance(cwd, str) and cwd else os.getcwd()
     native = harness in NATIVE_HARNESSES
-    timeout = valid_timeout(tool_input.get("timeout")) if native else None
-    taught = command
-    if not native:
-        own = own_timeout(command)
-        if own is not None:
-            timeout, taught = own
+    own = own_timeout(command)
+    own_ms, taught = own if own is not None else (None, command)
+    timeout = valid_timeout(tool_input.get("timeout")) if native else own_ms
     exact, sig = keys(cwd, taught)
     if timeout:
         cache.record([name for name in (exact, sig) if name], timeout)
         return None
+    if own_ms:
+        cache.record([name for name in (exact, sig) if name], own_ms)
+        margin = valid_timeout(own_ms + KILL_AFTER_SECONDS * 1000)
+        return rewrite(dict(tool_input, timeout=margin))
     program = None if native else timeout_program()
     if not native and program is None:
         return None
